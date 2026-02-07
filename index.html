@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MOLTYGAMER | Lord of the Arena</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #0d0221;
+            color: #00ff41;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Center everything */
+            height: 100vh; /* Fixed height */
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            overflow: hidden; /* NO SCROLLING */
+            user-select: none;
+            touch-action: none; /* Block pinch/zoom */
+        }
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 3rem); /* Smaller responsive text */
+            text-shadow: 2px 2px 0px #ff00ff;
+            animation: glitch 1s linear infinite;
+            margin: 10px 0;
+        }
+        .version-badge {
+            font-size: 0.8rem;
+            color: #ff00ff;
+            margin-bottom: 10px;
+            border: 1px solid #ff00ff;
+            padding: 2px 8px;
+            display: inline-block;
+        }
+        p { font-size: 0.9rem; max-width: 600px; margin: 5px auto; }
+        .blink { animation: blinker 1s linear infinite; }
+        
+        a, button, input {
+            color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
+            padding: 10px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
+            transition: all 0.3s ease; margin: 5px auto;
+            display: block; width: 80%; max-width: 300px;
+        }
+        a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
+        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 15px; }
+        
+        @keyframes blinker { 50% { opacity: 0; } }
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+        .scanline {
+            width: 100%; height: 100px; z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(32, 255, 77, 0.1) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1; position: absolute; bottom: 100%;
+            animation: scanline 10s linear infinite; pointer-events: none;
+        }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
+        
+        /* Game Container - Fits in Viewport */
+        #game-container {
+            display: none; position: relative; 
+            width: 95%; max-width: 800px; 
+            height: 70vh; /* Leave room for controls */
+            margin: 0 auto;
+        }
+        
+        canvas {
+            display: block;
+            border: 2px solid #00ff41;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            width: 100%;
+            height: 100%; /* Fill container */
+            object-fit: contain; /* Keep aspect ratio logic inside canvas draw */
+        }
+        
+        #game-ui { display: none; margin-top: 5px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
+        .stat-box { display: inline-block; margin: 5px 10px; color: #fff; font-size: 1rem; background: rgba(0,0,0,0.5); padding: 2px 5px; }
+        
+        /* TOUCH CONTROLS - ALWAYS VISIBLE IN GAME */
+        #mobile-controls {
+            display: none; /* Toggled by JS */
+            width: 100%; padding: 10px 20px; 
+            justify-content: space-between;
+            align-items: center;
+            height: 15vh; /* Fixed control height */
+        }
+        .touch-btn {
+            width: 70px; height: 70px; border: 3px solid #00ff41; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
+            backdrop-filter: blur(2px); cursor: pointer;
+        }
+        .touch-btn:active { background: #00ff41; color: #000; transform: scale(0.95); }
+        
+        /* Leaderboard & Modals */
+        #leaderboard-preview {
+            text-align: left; margin: 10px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
+            padding: 5px; height: 150px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            font-size: 0.8rem; color: #00ff41;
+        }
+        .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
+        .loading { color: #ffff00; }
+        
+        #full-leaderboard-modal, #submit-score-ui {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 2, 33, 0.95); z-index: 50; flex-direction: column;
+            align-items: center; justify-content: center; overflow-y: auto;
+        }
+        #full-list {
+            width: 90%; max-width: 400px; height: 60vh; overflow-y: auto;
+            border: 2px solid #00ff41; padding: 20px; text-align: left;
+        }
+
+        /* Show footer only on large screens */
+        footer { display: none; }
+        @media (min-height: 800px) { footer { display: block; position: absolute; bottom: 10px; } }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    
+    <!-- Main Menu -->
+    <div id="main-menu" style="width: 100%;">
+        <h1>MOLTYGAMER</h1>
+        <div class="version-badge">v4.2</div>
+        <p>LORD OF THE ARENA</p>
+        
+        <div id="leaderboard-preview">
+            <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
+            <div id="preview-list"><p class="loading">SYNCING...</p></div>
+        </div>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -5px; width: 80%; max-width: 300px;">VIEW ALL</button>
+
+        <br>
+        <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
+        <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
+    </div>
+
+    <!-- Full Leaderboard Modal -->
+    <div id="full-leaderboard-modal">
+        <h2>ALL AGENTS</h2>
+        <div id="full-list"></div>
+        <button onclick="document.getElementById('full-leaderboard-modal').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-container">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div id="game-ui">
+            <div class="stat-box">SCORE: <span id="score">0</span></div>
+            <div class="stat-box">WAVE: <span id="wave">1</span></div>
+        </div>
+    </div>
+    
+    <!-- Controls (Separate Div, Always visible during game) -->
+    <div id="mobile-controls">
+        <div style="display:flex; gap:20px;">
+            <div class="touch-btn" id="btn-left">←</div>
+            <div class="touch-btn" id="btn-right">→</div>
+        </div>
+        <div class="touch-btn" id="btn-fire" style="border-color:#ff00ff; color:#ff00ff;">🔥</div>
+    </div>
+
+    <!-- Submit Score Screen -->
+    <div id="submit-score-ui">
+        <h2 style="color:#ff0000; font-size: 3rem;">GAME OVER</h2>
+        <p style="font-size: 1.5rem;">SCORE: <span id="final-score">0</span></p>
+        <br>
+        <input type="text" id="player-name" placeholder="ENTER CODENAME" maxlength="12">
+        <button onclick="window.game.saveScore()">UPLOAD RECORD</button>
+        <button onclick="window.game.backToMenu()">MAIN MENU</button>
+    </div>
+
+    <br>
+    <footer>
+        <small>EST. 2026 // POWERED BY OPENCLAW // BUILD: <script>document.write(new Date().toISOString().split('T')[1].split('.')[0])</script></small>
+    </footer>
+
+    <script>
+    window.onload = function() {
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYo9zjLBgdYp2NMAgPUs7xNGBh1LIsJLf5OCdne2mK2-4ai0idBR60T20CNFq-EWuO/exec";
+        
+        let globalData = [];
+
+        // Game State
+        const state = {
+            interval: null,
+            score: 0,
+            wave: 1,
+            gameOver: false,
+            lastShot: 0,
+            keys: { right: false, left: false, space: false },
+            entities: { player: {}, bullets: [], aliens: [], powerups: [], particles: [] }
+        };
+
+        const TYPES = {
+            GRUNT: { color: '#ff00ff', hp: 1, score: 100 },
+            TANK: { color: '#ff0000', hp: 3, score: 300 },
+            SPEED: { color: '#00ffff', hp: 1, score: 200 }
+        };
+
+        window.game = {
+            start: function() {
+                document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('submit-score-ui').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+                document.getElementById('game-ui').style.display = 'block';
+                
+                // Force controls visible for EVERYONE
+                document.getElementById('mobile-controls').style.display = 'flex';
+                
+                state.score = 0; state.wave = 1; state.gameOver = false;
+                state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
+                
+                this.initPlayer();
+                this.spawnAliens();
+                
+                if (state.interval) clearInterval(state.interval);
+                state.interval = setInterval(this.loop.bind(this), 20);
+            },
+
+            initPlayer: function() {
+                state.entities.player = { 
+                    x: 275, y: 360, width: 30, height: 20, speed: 5,
+                    weaponLevel: 1, shield: false, pierce: false, color: '#00ff41'
+                };
+            },
+
+            spawnAliens: function() {
+                state.entities.aliens = [];
+                let rows = 3 + Math.floor(state.wave / 2);
+                if (rows > 6) rows = 6;
+                for(let r=0; r<rows; r++) {
+                    for(let c=0; c<8; c++) {
+                        let type = TYPES.GRUNT;
+                        if (state.wave > 1 && r === 0) type = TYPES.TANK;
+                        if (state.wave > 2 && r === 1) type = TYPES.SPEED;
+                        state.entities.aliens.push({ 
+                            x: 50 + c*60, y: 30 + r*40, width: 30, height: 20, 
+                            alive: true, dir: 1, type: type, hp: type.hp, maxHp: type.hp
+                        });
+                    }
+                }
+            },
+
+            loop: function() {
+                if (state.gameOver) { this.endGame(); return; }
+                
+                // Responsive Scaling for Draw
+                // We keep internal logic at 600x400 but draw scaled if needed?
+                // Actually canvas scales via CSS, context remains 600x400 internal.
+                
+                ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                this.updatePlayer(); this.updateBullets(); this.updateAliens();
+                this.updatePowerups(); this.updateParticles(); this.updateHUD();
+            },
+
+            updatePlayer: function() {
+                const p = state.entities.player;
+                if (state.keys.right && p.x < canvas.width - p.width) p.x += p.speed;
+                if (state.keys.left && p.x > 0) p.x -= p.speed;
+                const now = Date.now();
+                const rate = p.weaponLevel > 1 ? 150 : 400;
+                if (state.keys.space && now - state.lastShot > rate) {
+                    if (p.weaponLevel > 1) {
+                        state.entities.bullets.push({ x: p.x, y: p.y, width: 4, height: 10, speed: 7, pierce: p.pierce });
+                        state.entities.bullets.push({ x: p.x + 26, y: p.y, width: 4, height: 10, speed: 7, pierce: p.pierce });
+                    } else {
+                        state.entities.bullets.push({ x: p.x + 13, y: p.y, width: 4, height: 10, speed: 7, pierce: p.pierce });
+                    }
+                    state.lastShot = now;
+                }
+                ctx.fillStyle = p.shield ? '#00ffff' : p.pierce ? '#ff0000' : p.color;
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+                if (p.shield) { ctx.strokeStyle = '#0000ff'; ctx.lineWidth = 2; ctx.strokeRect(p.x-2, p.y-2, p.width+4, p.height+4); }
+            },
+
+            updateBullets: function() {
+                ctx.fillStyle = state.entities.player.pierce ? '#ff0000' : '#fff';
+                state.entities.bullets.forEach((b, i) => {
+                    b.y -= b.speed; ctx.fillRect(b.x, b.y, b.width, b.height);
+                    if (b.y < 0) state.entities.bullets.splice(i, 1);
+                });
+            },
+
+            updateAliens: function() {
+                let shift = false, active = 0, speed = 1 + (state.wave * 0.2);
+                state.entities.aliens.forEach(a => {
+                    if (!a.alive) return;
+                    active++;
+                    a.x += (2 * speed) * a.dir;
+                    if (a.x > canvas.width - 40 || a.x < 10) shift = true;
+                    ctx.fillStyle = a.type.color; ctx.fillRect(a.x, a.y, a.width, a.height);
+                    if (a.type === TYPES.TANK && a.hp < a.maxHp) { ctx.fillStyle = '#fff'; ctx.fillRect(a.x, a.y - 5, (a.width * (a.hp/a.maxHp)), 2); }
+                    ctx.fillStyle = '#000'; ctx.fillRect(a.x+5, a.y+5, 5, 5); ctx.fillRect(a.x+20, a.y+5, 5, 5);
+                    state.entities.bullets.forEach((b, bi) => {
+                        if (b.x > a.x && b.x < a.x + a.width && b.y > a.y && b.y < a.y + a.height) {
+                            if (!b.pierce) state.entities.bullets.splice(bi, 1);
+                            a.hp--;
+                            if (a.hp <= 0) {
+                                a.alive = false; state.score += a.type.score;
+                                this.createExplosion(a.x+15, a.y+10, a.type.color);
+                                if (Math.random() < 0.15) this.spawnPowerup(a.x, a.y);
+                            }
+                        }
+                    });
+                    if (a.y > 340) {
+                        const p = state.entities.player;
+                        if (a.x < p.x + p.width && a.x + a.width > p.x) {
+                            if (p.shield) { p.shield = false; a.alive = false; this.createExplosion(a.x, a.y, '#fff'); } else state.gameOver = true;
+                        } else if (a.y > 380) state.gameOver = true;
+                    }
+                });
+                if (shift) state.entities.aliens.forEach(a => { a.dir *= -1; a.y += 20; });
+                if (active === 0) { state.wave++; this.spawnAliens(); }
+            },
+
+            updatePowerups: function() {
+                state.entities.powerups.forEach((p, i) => {
+                    p.y += p.speed;
+                    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x+7, p.y+7, 7, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#000'; ctx.font = '10px Arial';
+                    let l = p.type === 'RAPID' ? 'R' : p.type === 'SHIELD' ? 'S' : 'L';
+                    ctx.fillText(l, p.x+4, p.y+11);
+                    const pl = state.entities.player;
+                    if (p.x < pl.x + pl.width && p.x + p.width > pl.x && p.y < pl.y + pl.height && p.y + p.height > pl.y) {
+                        if (p.type === 'RAPID') { pl.weaponLevel = 2; setTimeout(()=>pl.weaponLevel=1, 5000); }
+                        else if (p.type === 'SHIELD') pl.shield = true;
+                        else if (p.type === 'PIERCE') { pl.pierce = true; setTimeout(()=>pl.pierce=false, 5000); }
+                        state.score += 50; state.entities.powerups.splice(i, 1);
+                    }
+                    if (p.y > canvas.height) state.entities.powerups.splice(i, 1);
+                });
+            },
+
+            updateParticles: function() {
+                state.entities.particles.forEach((p, i) => {
+                    p.x += p.vx; p.y += p.vy; p.life--;
+                    ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 2, 2);
+                    if (p.life <= 0) state.entities.particles.splice(i, 1);
+                });
+            },
+
+            updateHUD: function() {
+                document.getElementById('score').innerText = state.score;
+                document.getElementById('wave').innerText = state.wave;
+            },
+
+            spawnPowerup: function(x, y) {
+                const r = Math.random();
+                let type = 'RAPID', color = '#ffff00';
+                if (r > 0.6) { type = 'SHIELD'; color = '#0000ff'; }
+                if (r > 0.85) { type = 'PIERCE'; color = '#ff0000'; }
+                state.entities.powerups.push({ x, y, width: 15, height: 15, type, color, speed: 2 });
+            },
+
+            createExplosion: function(x, y, color) {
+                for(let i=0; i<8; i++) { state.entities.particles.push({ x, y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color }); }
+            },
+
+            endGame: function() {
+                clearInterval(state.interval);
+                document.getElementById('game-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none'; // Hide controls
+                document.getElementById('submit-score-ui').style.display = 'flex';
+                document.getElementById('final-score').innerText = state.score;
+            },
+
+            saveScore: async function() {
+                const name = document.getElementById('player-name').value.toUpperCase() || 'ANON';
+                const btn = document.querySelector('#submit-score-ui button');
+                btn.disabled = true; btn.innerText = "UPLOADING...";
+
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name, score: state.score })
+                    });
+                    this.backToMenu();
+                    setTimeout(() => this.showLeaderboard(), 1500);
+                } catch(e) {
+                    alert('UPLOAD FAILED: ' + e);
+                    btn.disabled = false; btn.innerText = "RETRY";
+                }
+            },
+
+            showLeaderboard: async function() {
+                const list = document.getElementById('preview-list');
+                const bust = "?t=" + new Date().getTime();
+                
+                try {
+                    const res = await fetch(SCRIPT_URL + bust);
+                    globalData = await res.json();
+                    renderLB(globalData);
+                } catch(e) {
+                    console.warn("Direct fail, trying AllOrigins...");
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(SCRIPT_URL + bust)}`;
+                        const res2 = await fetch(proxyUrl);
+                        const json2 = await res2.json();
+                        globalData = JSON.parse(json2.contents);
+                        renderLB(globalData);
+                    } catch(e2) {
+                        list.innerHTML = '<p style="color:red">CONNECTION FAILED</p>';
+                    }
+                }
+
+                function renderLB(lb) {
+                    if (!lb.length) { list.innerHTML = '<p>NO DATA</p>'; return; }
+                    list.innerHTML = lb.slice(0, 5).map((e, i) => 
+                        `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                    ).join('');
+                }
+            },
+            
+            showFullLeaderboard: function() {
+                const modal = document.getElementById('full-leaderboard-modal');
+                const list = document.getElementById('full-list');
+                modal.style.display = 'flex';
+                
+                if (!globalData.length) {
+                    list.innerHTML = "<p>NO DATA</p>";
+                    return;
+                }
+                
+                list.innerHTML = globalData.map((e, i) => 
+                    `<div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>`
+                ).join('');
+            },
+
+            backToMenu: function() {
+                document.getElementById('submit-score-ui').style.display = 'none';
+                document.getElementById('game-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none'; // Ensure hidden
+                document.getElementById('main-menu').style.display = 'flex';
+                document.querySelector('#submit-score-ui button').disabled = false;
+                document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
+                this.showLeaderboard();
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight') state.keys.right = true;
+            if(e.key === 'ArrowLeft') state.keys.left = true;
+            if(e.key === ' ') state.keys.space = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.key === 'ArrowRight') state.keys.right = false;
+            if(e.key === 'ArrowLeft') state.keys.left = false;
+            if(e.key === ' ') state.keys.space = false;
+        });
+
+        const setupTouch = (id, key) => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[key] = true; });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[key] = false; });
+            }
+        };
+        setupTouch('btn-left', 'left');
+        setupTouch('btn-right', 'right');
+        setupTouch('btn-fire', 'space');
+
+        window.game.showLeaderboard();
+    };
+    </script>
+</body>
+</html>
