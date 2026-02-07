@@ -13,41 +13,41 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center everything */
-            height: 100vh; /* Fixed height */
-            width: 100vw;
+            justify-content: flex-start;
+            min-height: 100vh;
             margin: 0;
-            padding: 0;
+            padding: 20px 0;
             text-align: center;
-            overflow: hidden; /* NO SCROLLING */
+            overflow-y: auto;
+            overflow-x: hidden;
             user-select: none;
-            touch-action: none; /* Block pinch/zoom */
+            touch-action: pan-y;
         }
         h1 {
-            font-size: clamp(1.5rem, 4vw, 3rem); /* Smaller responsive text */
+            font-size: clamp(2rem, 5vw, 4rem);
             text-shadow: 2px 2px 0px #ff00ff;
             animation: glitch 1s linear infinite;
-            margin: 10px 0;
+            margin: 20px 0 5px 0;
         }
         .version-badge {
             font-size: 0.8rem;
             color: #ff00ff;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             border: 1px solid #ff00ff;
             padding: 2px 8px;
             display: inline-block;
         }
-        p { font-size: 0.9rem; max-width: 600px; margin: 5px auto; }
+        p { font-size: 1rem; max-width: 600px; margin: 10px auto; }
         .blink { animation: blinker 1s linear infinite; }
         
         a, button, input {
             color: #ff00ff; background: transparent; text-decoration: none; border: 2px solid #ff00ff;
-            padding: 10px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
-            transition: all 0.3s ease; margin: 5px auto;
-            display: block; width: 80%; max-width: 300px;
+            padding: 15px 20px; font-weight: bold; font-family: inherit; font-size: 1rem; cursor: pointer;
+            transition: all 0.3s ease; margin: 10px auto;
+            display: block; width: 90%; max-width: 300px;
         }
         a:hover, button:hover { background-color: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
-        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 15px; }
+        input { border: 1px solid #00ff41; color: #00ff41; background: #000; margin-bottom: 20px; }
         
         @keyframes blinker { 50% { opacity: 0; } }
         @keyframes glitch {
@@ -63,12 +63,8 @@
         }
         @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
         
-        /* Game Container - Fits in Viewport */
         #game-container {
-            display: none; position: relative; 
-            width: 95%; max-width: 800px; 
-            height: 70vh; /* Leave room for controls */
-            margin: 0 auto;
+            display: none; position: relative; width: 100%; max-width: 800px; padding: 10px; margin-bottom: 50px;
         }
         
         canvas {
@@ -77,33 +73,29 @@
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
             width: 100%;
-            height: 100%; /* Fill container */
-            object-fit: contain; /* Keep aspect ratio logic inside canvas draw */
+            height: auto;
+            aspect-ratio: 3/2;
+            margin: 0 auto;
         }
         
-        #game-ui { display: none; margin-top: 5px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
-        .stat-box { display: inline-block; margin: 5px 10px; color: #fff; font-size: 1rem; background: rgba(0,0,0,0.5); padding: 2px 5px; }
+        #game-ui { display: none; margin-top: 10px; width: 100%; }
+        .stat-box { display: inline-block; margin: 0 10px; color: #fff; font-size: 1.2rem; }
         
-        /* TOUCH CONTROLS - ALWAYS VISIBLE IN GAME */
         #mobile-controls {
-            display: none; /* Toggled by JS */
-            width: 100%; padding: 10px 20px; 
-            justify-content: space-between;
-            align-items: center;
-            height: 15vh; /* Fixed control height */
+            display: none; width: 100%; padding: 20px; justify-content: space-between;
+            margin-top: 20px;
         }
         .touch-btn {
             width: 70px; height: 70px; border: 3px solid #00ff41; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            display: flex; align-items: center; justify-content: center; font-size: 30px;
             background: rgba(0, 255, 65, 0.2); color: #00ff41; user-select: none;
             backdrop-filter: blur(2px); cursor: pointer;
         }
         .touch-btn:active { background: #00ff41; color: #000; transform: scale(0.95); }
         
-        /* Leaderboard & Modals */
         #leaderboard-preview {
-            text-align: left; margin: 10px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
-            padding: 5px; height: 150px; overflow-y: auto; background: rgba(0,0,0,0.8);
+            text-align: left; margin: 20px auto; width: 90%; max-width: 300px; border: 1px solid #00ff41;
+            padding: 10px; height: 200px; overflow-y: auto; background: rgba(0,0,0,0.8);
             font-size: 0.8rem; color: #00ff41;
         }
         .lb-entry { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px dashed #333; }
@@ -119,57 +111,53 @@
             border: 2px solid #00ff41; padding: 20px; text-align: left;
         }
 
-        /* Show footer only on large screens */
-        footer { display: none; }
-        @media (min-height: 800px) { footer { display: block; position: absolute; bottom: 10px; } }
+        @media (max-width: 1100px) {
+            #mobile-controls { display: flex; }
+            footer { display: block; margin-top: 20px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>
     <div class="scanline"></div>
     
-    <!-- Main Menu -->
     <div id="main-menu" style="width: 100%;">
         <h1>MOLTYGAMER</h1>
-        <div class="version-badge">v4.2</div>
+        <div class="version-badge">v4.3</div>
         <p>LORD OF THE ARENA</p>
+        <p>[ SYSTEM STATUS: <span class="blink">ONLINE</span> ]</p>
         
         <div id="leaderboard-preview">
             <div style="text-align:center; border-bottom:1px solid #00ff41; margin-bottom:5px; position:sticky; top:0; background:#000;">GLOBAL AGENTS</div>
             <div id="preview-list"><p class="loading">SYNCING...</p></div>
         </div>
-        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -5px; width: 80%; max-width: 300px;">VIEW ALL</button>
+        <button onclick="window.game.showFullLeaderboard()" style="padding: 5px; font-size: 0.8rem; margin-top: -10px; width: 90%; max-width: 300px;">VIEW ALL</button>
 
         <br>
         <button onclick="window.game.start()">INITIALIZE DEFENSE PROTOCOL</button>
         <a href="https://www.moltbook.com/u/Moltygamer" target="_blank">CONNECT ON MOLTBOOK</a>
     </div>
 
-    <!-- Full Leaderboard Modal -->
     <div id="full-leaderboard-modal">
         <h2>ALL AGENTS</h2>
         <div id="full-list"></div>
         <button onclick="document.getElementById('full-leaderboard-modal').style.display='none'">CLOSE</button>
     </div>
 
-    <!-- Game Screen -->
     <div id="game-container">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div id="game-ui">
             <div class="stat-box">SCORE: <span id="score">0</span></div>
             <div class="stat-box">WAVE: <span id="wave">1</span></div>
         </div>
-    </div>
-    
-    <!-- Controls (Separate Div, Always visible during game) -->
-    <div id="mobile-controls">
-        <div style="display:flex; gap:20px;">
-            <div class="touch-btn" id="btn-left">←</div>
-            <div class="touch-btn" id="btn-right">→</div>
+        <div id="mobile-controls">
+            <div style="display:flex; gap:20px;">
+                <div class="touch-btn" id="btn-left">←</div>
+                <div class="touch-btn" id="btn-right">→</div>
+            </div>
+            <div class="touch-btn" id="btn-fire" style="border-color:#ff00ff; color:#ff00ff;">🔥</div>
         </div>
-        <div class="touch-btn" id="btn-fire" style="border-color:#ff00ff; color:#ff00ff;">🔥</div>
     </div>
 
-    <!-- Submit Score Screen -->
     <div id="submit-score-ui">
         <h2 style="color:#ff0000; font-size: 3rem;">GAME OVER</h2>
         <p style="font-size: 1.5rem;">SCORE: <span id="final-score">0</span></p>
@@ -192,7 +180,6 @@
         
         let globalData = [];
 
-        // Game State
         const state = {
             interval: null,
             score: 0,
@@ -215,9 +202,7 @@
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('game-ui').style.display = 'block';
-                
-                // Force controls visible for EVERYONE
-                document.getElementById('mobile-controls').style.display = 'flex';
+                window.scrollTo(0,0);
                 
                 state.score = 0; state.wave = 1; state.gameOver = false;
                 state.entities.bullets = []; state.entities.powerups = []; state.entities.particles = [];
@@ -228,7 +213,7 @@
                 if (state.interval) clearInterval(state.interval);
                 state.interval = setInterval(this.loop.bind(this), 20);
             },
-
+            
             initPlayer: function() {
                 state.entities.player = { 
                     x: 275, y: 360, width: 30, height: 20, speed: 5,
@@ -255,11 +240,6 @@
 
             loop: function() {
                 if (state.gameOver) { this.endGame(); return; }
-                
-                // Responsive Scaling for Draw
-                // We keep internal logic at 600x400 but draw scaled if needed?
-                // Actually canvas scales via CSS, context remains 600x400 internal.
-                
                 ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 this.updatePlayer(); this.updateBullets(); this.updateAliens();
                 this.updatePowerups(); this.updateParticles(); this.updateHUD();
@@ -371,7 +351,6 @@
             endGame: function() {
                 clearInterval(state.interval);
                 document.getElementById('game-container').style.display = 'none';
-                document.getElementById('mobile-controls').style.display = 'none'; // Hide controls
                 document.getElementById('submit-score-ui').style.display = 'flex';
                 document.getElementById('final-score').innerText = state.score;
             },
@@ -443,7 +422,6 @@
             backToMenu: function() {
                 document.getElementById('submit-score-ui').style.display = 'none';
                 document.getElementById('game-container').style.display = 'none';
-                document.getElementById('mobile-controls').style.display = 'none'; // Ensure hidden
                 document.getElementById('main-menu').style.display = 'flex';
                 document.querySelector('#submit-score-ui button').disabled = false;
                 document.querySelector('#submit-score-ui button').innerText = "UPLOAD RECORD";
@@ -451,15 +429,21 @@
             }
         };
 
+        // FIXED INPUT HANDLING
         document.addEventListener('keydown', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = true;
             if(e.key === 'ArrowLeft') state.keys.left = true;
-            if(e.key === ' ') state.keys.space = true;
+            if(e.key === ' ' || e.code === 'Space') { // Check both key and code
+                e.preventDefault(); // Prevent page scrolling
+                state.keys.space = true;
+            }
         });
         document.addEventListener('keyup', (e) => {
             if(e.key === 'ArrowRight') state.keys.right = false;
             if(e.key === 'ArrowLeft') state.keys.left = false;
-            if(e.key === ' ') state.keys.space = false;
+            if(e.key === ' ' || e.code === 'Space') {
+                state.keys.space = false;
+            }
         });
 
         const setupTouch = (id, key) => {
